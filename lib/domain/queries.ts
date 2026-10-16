@@ -78,8 +78,8 @@ const STATUS_FROM_DB: Record<string, RawRace["estado"]> = {
 };
 
 export const getLeagueData = cache(async (): Promise<LeagueData> => {
-  const [categoriesRes, seasonsRes, racesRes, ridersRes, entriesRes, resultsRes, standingsRes] = await Promise.all([
-    supabase.from("categories").select("code, name, short_name, color, min_age, max_age, bib_prefix").order("sort_order"),
+  const [categoriesRes, seasonsRes, racesRes, ridersRes, entriesRes, resultsRes, standingsRes, bibsRes] = await Promise.all([
+    supabase.from("categories").select("id, code, name, short_name, color, min_age, max_age, bib_prefix").order("sort_order"),
     supabase.from("seasons").select("year").order("year", { ascending: false }),
     supabase
       .from("races")
@@ -88,12 +88,13 @@ export const getLeagueData = cache(async (): Promise<LeagueData> => {
       )
       .order("race_date"),
     supabase.from("riders_public").select("id, first_name, last_name, full_name, initials, club, edad, photo_url"),
-    supabase.from("entries").select("bib, status, races(slug), categories(code), rider_id"),
+    supabase.from("entries").select("bib, status, rider_id, category_id, scored_category_ids, races(slug, season_id), categories(code)"),
     supabase.from("results").select("net_time_ms, position, points, categories(code), entries(rider_id, races(slug))"),
     supabase.from("standings").select("total_points, races_counted, seasons(year), categories(code), rider_id"),
+    supabase.from("rider_category_bibs").select("season_id, category_id, rider_id, bib"),
   ]);
 
-  for (const res of [categoriesRes, seasonsRes, racesRes, ridersRes, entriesRes, resultsRes, standingsRes]) {
+  for (const res of [categoriesRes, seasonsRes, racesRes, ridersRes, entriesRes, resultsRes, standingsRes, bibsRes]) {
     if (res.error) throw new Error(res.error.message);
   }
 
@@ -151,16 +152,27 @@ export const getLeagueData = cache(async (): Promise<LeagueData> => {
     foto: r.photo_url,
   }));
 
-  const entries: RawEntry[] = (entriesRes.data ?? []).map((e) => {
+  // Un corredor puede puntuar en su categoría + Élite (scored_category_ids):
+  // cada categoría puntuada genera su propia fila aquí, con el dorsal real
+  // de esa categoría (rider_category_bibs) — no el bib denormalizado de la
+  // categoría principal. Así "Inscritos" lo muestra en ambas pestañas.
+  const categoryCodeById = new Map((categoriesRes.data ?? []).map((c) => [c.id, c.code as CategoriaId]));
+  const bibByKey = new Map((bibsRes.data ?? []).map((b) => [`${b.season_id}:${b.category_id}:${b.rider_id}`, b.bib as number]));
+
+  const entries: RawEntry[] = (entriesRes.data ?? []).flatMap((e) => {
     const race = Array.isArray(e.races) ? e.races[0] : e.races;
-    const category = Array.isArray(e.categories) ? e.categories[0] : e.categories;
-    return {
-      raceSlug: race?.slug ?? "",
-      riderId: e.rider_id,
-      bib: e.bib,
-      categoryId: category?.code as CategoriaId,
-      status: e.status,
-    };
+    const primaryCategory = Array.isArray(e.categories) ? e.categories[0] : e.categories;
+    const raceSlug = race?.slug ?? "";
+    const seasonId = race?.season_id as string | undefined;
+    const scoredIds = (e.scored_category_ids as string[] | null) ?? (e.category_id ? [e.category_id] : []);
+
+    return scoredIds
+      .map((catId): RawEntry => {
+        const code = catId === e.category_id ? (primaryCategory?.code as CategoriaId | undefined) : categoryCodeById.get(catId);
+        const bib = (seasonId && bibByKey.get(`${seasonId}:${catId}:${e.rider_id}`)) ?? e.bib;
+        return { raceSlug, riderId: e.rider_id, bib, categoryId: code as CategoriaId, status: e.status };
+      })
+      .filter((row) => Boolean(row.categoryId));
   });
 
   const results: RawResult[] = (resultsRes.data ?? []).map((r) => {
