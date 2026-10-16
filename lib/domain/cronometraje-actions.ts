@@ -28,7 +28,7 @@ export async function exportStartlist(raceSlug: string): Promise<StartlistExport
 
   const { data: race, error: raceError } = await admin
     .from("races")
-    .select("id, slug, name, season_id")
+    .select("id, slug, name, season_id, type, laps")
     .eq("slug", raceSlug)
     .maybeSingle();
   if (raceError) throw new Error(raceError.message);
@@ -106,7 +106,14 @@ export async function exportStartlist(raceSlug: string): Promise<StartlistExport
 
   return {
     version: 1,
-    race: { id: race.id, slug: race.slug, name: race.name, seasonId: race.season_id },
+    race: {
+      id: race.id,
+      slug: race.slug,
+      name: race.name,
+      seasonId: race.season_id,
+      type: race.type as "ruta" | "circuito",
+      laps: race.laps ?? null,
+    },
     categories,
     entrants,
     exportedAt: new Date().toISOString(),

@@ -5,7 +5,7 @@
 
 export interface StartlistExportV1 {
   version: 1;
-  race: { id: string; slug: string; name: string; seasonId: string };
+  race: { id: string; slug: string; name: string; seasonId: string; type: "ruta" | "circuito"; laps: number | null };
   categories: { code: string; name: string; bibPrefix: string }[];
   entrants: {
     entryId: string;

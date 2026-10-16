@@ -18,7 +18,7 @@ Botón "Exportar corredores" en `/admin/carreras/[slug]`. Un archivo
 ```json
 {
   "version": 1,
-  "race": { "id": "uuid", "slug": "gran-fondo-x", "name": "...", "seasonId": "uuid" },
+  "race": { "id": "uuid", "slug": "gran-fondo-x", "name": "...", "seasonId": "uuid", "type": "ruta", "laps": null },
   "categories": [{ "code": "juvenil_a", "name": "Juvenil A", "bibPrefix": "J" }],
   "entrants": [
     {
@@ -45,6 +45,11 @@ Deliberadamente **sin** teléfono, contacto de emergencia ni datos de salud
 `bib` es el dorsal oficial de temporada (categoría principal). El
 cronometraje lo usa como **dorsal provisional** para corredores ya
 inscritos — es el mismo número que llevan impreso.
+
+`race.type` determina el modo de operación del cronometraje (grupos de
+salida escalonados en "ruta", vueltas por categoría en "circuito").
+`race.laps` es solo un default sugerido — el cronometraje permite editar
+las vueltas por categoría antes de dar salida.
 
 ## 2. Resultados (cronometraje → liciba admin)
 
