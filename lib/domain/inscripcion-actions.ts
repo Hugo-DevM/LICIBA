@@ -23,7 +23,7 @@ type AdminClient = ReturnType<typeof createAdminClient>;
 // se adelantó (el unique constraint de rider_category_bibs es lo que
 // realmente evita el choque). Una liga nueva usa otro season_id, así que
 // la numeración puede reiniciar sin tocar esta lógica.
-async function obtenerOAsignarDorsal(
+export async function obtenerOAsignarDorsal(
   admin: AdminClient,
   seasonId: string,
   categoryId: string,

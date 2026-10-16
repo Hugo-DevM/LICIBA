@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useLeagueData } from "@/lib/domain/league-data-context";
 import { AdminShell } from "./admin-shell";
 import { InfoTab } from "./tabs/info-tab";
@@ -8,6 +8,9 @@ import { EntrantsTab } from "./tabs/entrants-tab";
 import { CaptureTab } from "./tabs/capture-tab";
 import { PublishTab } from "./tabs/publish-tab";
 import { buildBase, computeAll, type Edit } from "./capture-utils";
+import { ImportResultsModal } from "./import-results-modal";
+import { exportStartlist, publishRace } from "@/lib/domain/cronometraje-actions";
+import type { ResultsImportV1 } from "@/lib/domain/cronometraje-schema";
 
 const TABS = [
   { id: "info", label: "Información" },
@@ -25,6 +28,9 @@ export function RaceAdminConsole({ slug }: { slug: string }) {
   const [ed, setEd] = useState<Record<number, Edit>>({});
   const [modal, setModal] = useState(false);
   const [pub, setPub] = useState(c.finalizada);
+  const [publishing, setPublishing] = useState(false);
+  const [importPayload, setImportPayload] = useState<ResultsImportV1 | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const all = useMemo(() => computeAll(base, ed), [base, ed]);
   const pend = all.filter((r) => r.bad && !r.ll).length;
@@ -33,6 +39,40 @@ export function RaceAdminConsole({ slug }: { slug: string }) {
   const onEdit = (dorsal: number, key: keyof Edit, value: string) => {
     setEd((s) => ({ ...s, [dorsal]: { ...(s[dorsal] || {}), [key]: value } }));
     setPub(false);
+  };
+
+  const onExportStartlist = async () => {
+    const data = await exportStartlist(c.slug);
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${c.slug}-startlist.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const onFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const json = JSON.parse(await file.text());
+      if (json?.version !== 1) throw new Error("Versión de archivo no soportada.");
+      setImportPayload(json as ResultsImportV1);
+    } catch {
+      alert("El archivo no es un JSON de resultados válido.");
+    }
+  };
+
+  const onPublishConfirm = async () => {
+    setModal(false);
+    setPublishing(true);
+    try {
+      await publishRace(c.slug);
+      setPub(true);
+    } finally {
+      setPublishing(false);
+    }
   };
 
   return (
@@ -52,14 +92,25 @@ export function RaceAdminConsole({ slug }: { slug: string }) {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button className="h-[38px] cursor-pointer whitespace-nowrap border border-[#D6D3CA] bg-white px-3.5 font-sans text-[13px] font-semibold">
-              Importar CSV de chip
+            <button
+              onClick={onExportStartlist}
+              className="h-[38px] cursor-pointer whitespace-nowrap border border-[#D6D3CA] bg-white px-3.5 font-sans text-[13px] font-semibold"
+            >
+              Exportar corredores
+            </button>
+            <input ref={fileInputRef} type="file" accept="application/json" onChange={onFileSelected} className="hidden" />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="h-[38px] cursor-pointer whitespace-nowrap border border-[#D6D3CA] bg-white px-3.5 font-sans text-[13px] font-semibold"
+            >
+              Importar resultados
             </button>
             <button
               onClick={() => setModal(true)}
-              className="h-[38px] cursor-pointer whitespace-nowrap border-0 bg-liciba-orange px-4 font-display text-[15px] font-extrabold uppercase tracking-wide text-liciba-ink"
+              disabled={publishing}
+              className="h-[38px] cursor-pointer whitespace-nowrap border-0 bg-liciba-orange px-4 font-display text-[15px] font-extrabold uppercase tracking-wide text-liciba-ink disabled:opacity-60"
             >
-              Publicar resultados
+              {publishing ? "Publicando..." : "Publicar resultados"}
             </button>
           </div>
         </div>
@@ -109,10 +160,7 @@ export function RaceAdminConsole({ slug }: { slug: string }) {
                   Seguir capturando
                 </button>
                 <button
-                  onClick={() => {
-                    setModal(false);
-                    setPub(true);
-                  }}
+                  onClick={onPublishConfirm}
                   className="h-[42px] cursor-pointer border-0 bg-liciba-orange px-4 font-display text-[15px] font-extrabold uppercase tracking-wide text-liciba-ink"
                 >
                   Publicar ahora
@@ -122,6 +170,8 @@ export function RaceAdminConsole({ slug }: { slug: string }) {
           </div>
         </div>
       )}
+
+      {importPayload && <ImportResultsModal payload={importPayload} onClose={() => setImportPayload(null)} />}
     </AdminShell>
   );
 }

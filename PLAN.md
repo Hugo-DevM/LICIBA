@@ -235,6 +235,18 @@ Orden de construcción (cada paso deja algo usable):
 9. Pulido: SEO, OG images, responsive, fotos.
 
 ### Etapa 2 — Cronometraje offline
+
+> **Actualización 2026-10-15:** se descartó el enfoque de PWA dentro de
+> este repo con sincronización automática (outbox) descrito abajo. En su
+> lugar se construyó `liciba-cronometraje` como proyecto Vite+React+TS
+> completamente separado, offline-first con IndexedDB, que intercambia
+> datos con este sitio exclusivamente por archivo JSON (exportar
+> corredores → importar en cronometraje → exportar resultados → importar
+> aquí). Más simple, cero dependencia de red incluso al terminar la
+> carrera. Ver `docs/cronometraje-json-schema.md` y
+> `lib/domain/cronometraje-actions.ts`. El resto de esta sección queda
+> como registro histórico de la idea original, no como plan vigente.
+
 1. PWA shell + instalable + descarga de carrera a IndexedDB.
 2. Reloj de liga (offset + detección de cambio de reloj).
 3. Pantalla de **salida**: botón por grupo + generación de QR.
