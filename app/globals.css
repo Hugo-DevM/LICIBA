@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+:root {
+  --color-cream: #f5f4ef;
+  --color-ink: #13201b;
+  --color-panel: #1c2d26;
+  --color-green: #1e6b43;
+  --color-blue: #0a5a8c;
+  --color-orange: #f2661c;
+  --color-amber: #ffb21e;
+  --color-muted: #56625c;
+  --color-muted-dark: #8a968f;
+  --color-border: #e2e0d8;
+  --color-border-soft: #eceae3;
+}
+
+@theme inline {
+  --color-liciba-cream: var(--color-cream);
+  --color-liciba-ink: var(--color-ink);
+  --color-liciba-panel: var(--color-panel);
+  --color-liciba-green: var(--color-green);
+  --color-liciba-blue: var(--color-blue);
+  --color-liciba-orange: var(--color-orange);
+  --color-liciba-amber: var(--color-amber);
+  --color-liciba-muted: var(--color-muted);
+  --color-liciba-muted-dark: var(--color-muted-dark);
+  --color-liciba-border: var(--color-border);
+  --color-liciba-border-soft: var(--color-border-soft);
+
+  --font-sans: var(--font-barlow), ui-sans-serif, sans-serif;
+  --font-display: var(--font-barlow-condensed), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer base {
+  a {
+    color: var(--color-green);
+  }
+  a:hover {
+    color: var(--color-blue);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
